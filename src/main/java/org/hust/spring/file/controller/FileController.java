@@ -54,4 +54,35 @@ public class FileController {
                 .contentLength(file.length())
                 .body(resource);
     }
+
+    @PostMapping
+    public ResponseEntity<Void> importEx(@RequestParam("file") MultipartFile file) throws IOException, ParseException {
+        Workbook workbook = new XSSFWorkbook(file.getInputStream());
+        Sheet sheet = workbook.getSheetAt(0);
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+        Iterator<Row> rowIterator = sheet.rowIterator();
+        List<Employee> employees = new ArrayList<>();
+        while (rowIterator.hasNext()) {
+            Row row = rowIterator.next();
+            if (row.getRowNum() == 0) {
+                continue;
+            }
+            employees.add(Employee.builder()
+                    .firstName(getCellString(row, 1))
+                    .lastName(getCellString(row, 2))
+                    .gender(getCellString(row, 3))
+                    .country(getCellString(row, 4))
+                    .age(Integer.valueOf(getCellString(row, 5)))
+                    .dateOfBirth(sdf.parse(getCellString(row, 6)))
+                    .build());
+        }
+        repository.saveAll(employees);
+        return ResponseEntity.ok().build();
+    }
+
+    private static String getCellString(Row row, int index) {
+        Cell cell = row.getCell(index);
+        DataFormatter formatter = new DataFormatter();
+        return formatter.formatCellValue(cell);
+    }
 }
